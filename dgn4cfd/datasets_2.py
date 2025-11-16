@@ -8,7 +8,16 @@ from enum import Enum
 import requests
 
 from .graph import Graph
-from .transforms import cells_to_edge_index
+from glob import glob
+import pyvista as pv
+
+"""
+Dataset format: .vtu
+Data Information: nodes
+
+Receive several .vtu files in a specific number format and arrange them in index format
+
+"""
 
 
   
@@ -16,13 +25,17 @@ class Dataset(torch.utils.data.Dataset):
     r"""A base class for representing a Dataset.
 
     Args:
-        path (string): Path to the h5 file.
+        path (string): Path to the folder containing the .vtu files
         transform (callable, optional): A function/transform that takes in a :obj:`graphs4cfd.graph.Graph` object
             and returns a transformed version. The data object will be transformed before every access. (default: :obj:`None`)
+        
         max_indegree (int, optional): The maximum number of edges per node. Applies only if the mesh is provided. (default: :obj:`None`)
+        
         training_info (dict, optional): A dictionary containing values of type :obj:`ìnt` for the keys `n_in`,
             `step` and `T`. (default: :obj:`None`)
+        
         idx (int, optional): The index of the simulation to load. If :obj:`None`, then all the simulations are loaded. (default: :obj:`None`)
+        
         preload (bool, optional): If :obj:`True`, then the data is loaded in memory. If :obj:`False`, then the data
             is loaded from the h5 file at every access. (default: :obj:`False`)
     """
@@ -45,37 +58,56 @@ class Dataset(torch.utils.data.Dataset):
         self.training_info["n_in"]  = 1
         self.training_info["step"]  = 1
         self.training_sequences_length = self.training_info["n_in"] * self.training_info["step"] - self.training_info["step"] + 1
-        self.preload = preload
-        # Load only the given simulation idx
-        if idx is not None:
-            if preload == False:
-                raise ValueError(
-                    'If input argument to Dataset.__init__() idx is not None, then argument preload must be True.')
-            h5_file = h5py.File(self.path, "r")
-            self.h5_data = torch.tensor(np.array(h5_file["data"][idx]), dtype=torch.float32)
-            self.h5_mesh = torch.tensor(np.array(h5_file['mesh'][idx]), dtype=torch.long) if 'mesh' in h5_file else None
-            if self.h5_data.ndim == 2:
-                self.h5_data = self.h5_data.unsqueeze(0)
-                if self.h5_mesh is not None:
-                    self.h5_mesh = self.h5_mesh.unsqueeze(0)
-            h5_file.close()
-        # Load all the simulations
-        else:
-            if self.preload:
-                self.load()
-            else:
-                self.h5_data = None
-                self.h5_mesh = None
+        #self.preload = preload
+        self.vtu_files = self.find_all_files()
+
+        
+        self.data = None
+        self.mesh = None
+
+    def find_all_files(self) -> list:
+        """
+        Return the list of all .vtu files in ascending order.
+        Supports any directory stored in self.data_dir.
+        """
+        # Directory must exist
+        if not hasattr(self, "path"):
+            raise AttributeError("self.path is not defined")
+
+        pattern = os.path.join(self.path, "*.vtu")
+        vtu_files = glob(pattern)
+
+        # Sort in ascending (lexicographic or numeric-safe)
+        vtu_files = sorted(vtu_files)
+
+        return vtu_files
+        
+    def mesh_to_edge_index(self,mesh):
+        
+        n_cells = mesh.n_cells
+        edges = []
+        
+        for i in range(n_cells):
+            
+            cell = mesh.get_cell(i) # Get the ith cell
+            n_edges = cell.n_edges
+            
+            for j in range(n_edges):
+                    
+                    edge = cell.get_edge(j)
+                    c = edge.point_ids
+                    edges.append((c[0], c[1]))
+                    edges.append((c[1], c[0])) # Make it undirected
+        
+        edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+        
+        return edge_index
+        
 
     def __len__(self) -> int:
         r"""Return the number of samples in the dataset."""
-        if self.h5_data is not None:
-            return self.h5_data.shape[0]
-        else:
-            h5_file = h5py.File(self.path, 'r')
-            num_samples = h5_file['data'].shape[0]
-            h5_file.close()
-            return num_samples
+        
+        return len(self.vtu_files)
 
     def __getitem__(
         self,
@@ -114,44 +146,25 @@ class Dataset(torch.utils.data.Dataset):
             :obj:`graphs4cfd.graph.Graph`: The graph containing the sequence.
         """
         # Load the data
-        if self.preload:
-            data = self.h5_data[idx]
-            mesh = self.h5_mesh[idx] if self.h5_mesh is not None else None
-        else:
-            h5_file = h5py.File(self.path, 'r')
-            data = torch.tensor(h5_file['data'][idx], dtype=torch.float32)
-            mesh = torch.tensor(h5_file['mesh'][idx], dtype=torch.long) if 'mesh' in h5_file else None
-            h5_file.close()
+        mesh = pv.read(self.vtu_files[idx])
+        data = mesh.point_data(['pressure']).reshape(-1, 1) # Reshape to (-1,1)
+        data = torch.tensor(data, dtype=torch.float32) #-> Shape (N,1)
+
         # Compute the indices
         idx0 = sequence_start
         idx1 = sequence_start + n_in * step_size
+
         # Create the graph (only point cloud)
         graph = self.data2graph(data, idx0, idx1)
         # Transform the mesh cells to graph edges if the mesh is provided
-        if mesh is not None:
-            # Remove the cells with only negative indices (ghost cells)
-            mask = torch.logical_not((mesh < 0).all(dim=1))
-            mesh = mesh[mask]
-            graph.edge_index = cells_to_edge_index(mesh, max_indegree=self.max_indegree, pos=graph.pos)
-            if hasattr(graph, 'pos'):
-                graph.edge_attr = graph.pos[graph.edge_index[1]] - graph.pos[graph.edge_index[0]]
-            if cell_list:
-                mask = (mesh >= 0)
-                graph.cell_list = [cell[cell_mask] for cell, cell_mask in zip(mesh, mask)]
-        else:
-            if self.max_indegree is not None:
-                print("Warning: max_indegree parameter is not used because the mesh is not provided.")
+
+        graph.edge_index = self.mesh_to_edge_index(mesh) # Already returns torch tensor
+      
+        if hasattr(graph, 'pos'):
+            graph.edge_attr = graph.pos[graph.edge_index[1]] - graph.pos[graph.edge_index[0]]
+        
         # Apply the transformations
         return self.transform(graph) if self.transform is not None else graph
-
-    def load(self):
-        r"""Load the dataset in memory."""
-        print("Loading dataset:", self.path)
-        h5_file = h5py.File(self.path, "r")
-        self.h5_data = torch.tensor(np.array(h5_file["data"]), dtype=torch.float32)
-        self.h5_mesh = torch.tensor(np.array(h5_file['mesh']), dtype=torch.long) if 'mesh' in h5_file else None
-        h5_file.close()
-        self.preload = True
   
     def data2graph(
         self,
@@ -175,3 +188,50 @@ class Dataset(torch.utils.data.Dataset):
     
 
 
+class Shock(Dataset):
+
+    def __init__(
+        self,
+        *args,
+        T,
+        **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        if isinstance(T, int):
+            T = np.array([T] * super().__len__())
+        self.training_info = {'n_in': 1, 'step': 1, 'T': T}
+
+    def data2graph(
+        self,
+        data: torch.Tensor,
+        idx0: int,
+        idx1: int
+    ) -> Graph:
+        # Check number of nodes (not np.nan)
+        N = (data[:, 0] == data[:, 0]).sum()
+        # Remove np.nan and only keep the real nodes
+        data = data[:N]
+        # Build graph
+        graph = Graph()
+        graph.pos  = data[:, :2] # x, y
+        graph.glob = data[:,2:3] # Re
+        graph.target = data[:, 4:].reshape(N, -1, 6)[:, idx0:idx1, :3].reshape(N, -1) # u, v, p
+        # BCs
+        '''
+        In data[:,3]:
+            0 -> Inner flow
+            1 -> Periodic boundary
+            2 -> Inlet
+            3 -> Outlet
+            4 -> Wall
+        '''
+        graph.bound = data[:, 3].type(torch.uint8)
+        # Indicate the node types:
+        graph.omega = torch.zeros(N, 3)
+        # 1. Inner nodes
+        graph.omega[(graph.bound == 0) + (graph.bound == 1) + (graph.bound == 3), 0] = 1.
+        # 2. Inlet nodes
+        graph.omega[graph.bound == 2, 1] = 1.
+        # 3. Wall nodes
+        graph.omega[graph.bound == 4, 2] = 1.
+        return graph
