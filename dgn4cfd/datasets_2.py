@@ -17,6 +17,10 @@ Data Information: nodes
 
 Receive several .vtu files in a specific number format and arrange them in index format
 
+The original paper adds 5000 simulation with 101 timesteps in each simulation.
+
+Make changes accordingly. The vtu file should contain all transient simulation equation
+
 """
 
 
