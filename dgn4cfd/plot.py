@@ -203,7 +203,7 @@ def field(
     fig = plt.figure()
     ax = fig.add_subplot(111)
     triang = triangulation(pos, bound, boundary_idx=boundary_idx)
-    ax.tripcolor(triang, u, vmin=vmin, vmax=vmax, cmap=cmap, shading="gouraud")
+    ax.tripcolor(triang, u, vmin=-1, vmax=1, cmap=cmap, shading="gouraud") # Changede the vmin and vmax
     ax.set_aspect('equal')
     ax.set_xticks([]), ax.set_yticks([])
     xmin, xmax = pos[:,0].min().item(), pos[:,0].max().item()
