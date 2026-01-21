@@ -14,7 +14,9 @@ import dgn4cfd as dgn
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 #from dgn4cfd.datasets_3 import *
-from ..dgn4cfd.datasets_3 import *
+import sys
+sys.path.insert(0,'/lus/grand/projects/NeuralDE/kanadsen/myrepos/dgn4cfd_tum/dgn4cfd')
+from datasets_3 import *
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument('--experiment_id', type=int, default=0)
