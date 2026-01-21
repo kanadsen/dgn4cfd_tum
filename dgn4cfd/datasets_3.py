@@ -128,8 +128,6 @@ class Dataset(torch.utils.data.Dataset):
             txt_files = sorted(glob(txt_pattern))
 
             output.append((vtu_files[0],txt_files[0]))
-        
-        print("Output_spae",len(output))
 
         return output
     
@@ -150,7 +148,6 @@ class Dataset(torch.utils.data.Dataset):
 
                 if len(conditions) == 3:
                     break
-        print(conditions)
         return conditions
 
     """
@@ -244,7 +241,6 @@ class Dataset(torch.utils.data.Dataset):
         cond_input = self.read_conditions(text_file)
         mesh = pv.read(data_file)
         points = mesh.points
-        print(points.shape,len(cond_input))
         #print(mesh.point_data.keys())
         target = mesh.point_data['pressure'].reshape(-1, 1) 
         
@@ -309,7 +305,6 @@ class Shock(Dataset):
         # Build graph
         graph = Graph()
         graph.pos = torch.tensor(points, dtype=torch.float32) # x, y, z
-        print(graph.pos.shape)
         params = torch.tensor(conditions,dtype=torch.float32).repeat(points.shape[0], 1)
         graph.glob = params[:,0:1]
         graph.loc = params[:,1:2]
