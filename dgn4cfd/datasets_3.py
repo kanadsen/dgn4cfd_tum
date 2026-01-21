@@ -124,7 +124,7 @@ class Dataset(torch.utils.data.Dataset):
             vtu_files = sorted(glob(vtu_pattern, recursive=True))
 
             # -------- Extract ALL .txt files --------
-            txt_pattern = os.path.join(full_path, "*.txt")
+            txt_pattern = os.path.join(full_path, "parameterSettings.txt")
             txt_files = sorted(glob(txt_pattern))
 
             output.append((vtu_files[0],txt_files[0]))
