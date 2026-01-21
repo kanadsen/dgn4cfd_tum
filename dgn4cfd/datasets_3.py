@@ -242,7 +242,7 @@ class Dataset(torch.utils.data.Dataset):
         cond_input = self.read_conditions(text_file)
         mesh = pv.read(data_file)
         points = mesh.points
-        print(points.shape,cond_input.shape)
+        print(points.shape,len(cond_input))
         #print(mesh.point_data.keys())
         target = mesh.point_data['pressure'].reshape(-1, 1) 
         
