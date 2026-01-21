@@ -133,7 +133,6 @@ class Dataset(torch.utils.data.Dataset):
     
     def read_conditions(self,txt_path):
         conditions = []
-        print(txt_path)
         with open(txt_path,"r") as f:
             for line in f:
                 line = line.strip()
