@@ -128,13 +128,31 @@ class Dataset(torch.utils.data.Dataset):
 
         return output
     
+    def read_conditions(self,txt_path):
+        conditions = []
+        with open(txt_path,"r") as f:
+            for line in f:
+                line = line.strip()
+                if ":" not in line:
+                    continue
+                key , value = line.split(":",1)
 
+                try:
+                    conditions[key.strip()]=float(value.strip())
+                except ValueError:
+                    continue
+
+                if len(conditions) = 3
+                    break
+        return conditions
+
+    """
     def read_conditions(self,txt_path):
         """
-        Reads a .txt file where each line contains 4 numbers:
-            id  cond1  cond2  cond3
-        Returns:
-            A list of lists: [[cond1, cond2, cond3], ...]
+        #Reads a .txt file where each line contains 4 numbers:
+        #    id  cond1  cond2  cond3
+        #Returns:
+        #    A list of lists: [[cond1, cond2, cond3], ...]
         """
         conditions = []
 
@@ -152,7 +170,7 @@ class Dataset(torch.utils.data.Dataset):
                 conditions.append(cond)
 
         return conditions
-
+    """
         
     def mesh_to_edge_index(self,mesh):
         
