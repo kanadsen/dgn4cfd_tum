@@ -7,7 +7,11 @@ from typing import Callable, Dict, Union
 from enum import Enum
 import requests
 
-from .graph import Graph
+import sys
+sys.path.insert(0,'/lus/grand/projects/NeuralDE/kanadsen/myrepos/dgn4cfd_tum/dgn4cfd')
+
+#from .graph import Graph
+from graph import Graph
 from glob import glob
 import pyvista as pv
 import re
