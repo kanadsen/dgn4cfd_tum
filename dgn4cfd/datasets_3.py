@@ -304,6 +304,7 @@ class Shock(Dataset):
         # Build graph
         graph = Graph()
         graph.pos = torch.tensor(points, dtype=torch.float32) # x, y, z
+        print(graph.pos.shape)
         params = torch.tensor(conditions,dtype=torch.float32).repeat(points.shape[0], 1)
         graph.glob = params[:,0:1]
         graph.loc = params[:,1:2]
