@@ -24,5 +24,5 @@ for dirpath, dirnames, filenames in os.walk(root_dir):
         if filename.endswith(".encas"):
             zip_path = os.path.join(dirpath, filename)
             vtk_convert_sample(zip_path,zip_path, reader=vtk.vtkGenericEnSightReader(), writer=vtk.vtkXMLMultiBlockDataWriter())
-
+    print(f"Finished extracting {filename}")
 print("Finished extracting all zip files.")
