@@ -67,7 +67,7 @@ transform = transforms.Compose([
     ),
 ])
 dataset = Shock(
-    path      = "/home/kanadsen01/Desktop/Git_repos/Forked_Repos/dgn4cfd_tum/data/dataset_trial1",
+    path      = "/lus/grand/projects/NeuralDE/kanadsen/dataset_trial2",
     T         = experiment['nt'],
     transform = transform,
     preload   = False,
