@@ -1,6 +1,7 @@
 from torch_geometric.data import Data
-
-from .plot import pos, field, pos_field
+import sys
+sys.path.insert(0,'/lus/grand/projects/NeuralDE/kanadsen/myrepos/dgn4cfd_tum/dgn4cfd')
+from plot import pos, field, pos_field
 
 
 class Graph(Data):
