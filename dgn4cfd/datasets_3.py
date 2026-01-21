@@ -124,8 +124,6 @@ class Dataset(torch.utils.data.Dataset):
 
             output.append((vtu_files[0],txt_files[0]))
 
-            print(sample_id)
-
         return output
     
     def read_conditions(self,txt_path):
