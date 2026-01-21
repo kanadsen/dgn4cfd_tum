@@ -69,6 +69,7 @@ class Dataset(torch.utils.data.Dataset):
         
         self.data = None
         self.mesh = None
+        print("Calling dataset class")
 
 
 
@@ -123,6 +124,8 @@ class Dataset(torch.utils.data.Dataset):
             txt_files = sorted(glob(txt_pattern))
 
             output.append((vtu_files[0],txt_files[0]))
+        
+        print("Output_spae",len(output))
 
         return output
     
