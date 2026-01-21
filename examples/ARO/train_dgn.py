@@ -90,10 +90,10 @@ diffusion_process = dgn.nn.diffusion.DiffusionProcess(
 
 # Model
 arch = {
-    'dim':                1, # 3D
+    'dim':                3, # 3D
     'in_node_features':   1, # Noisy p
     'cond_node_features': 2, # 3 praametere
-    'cond_edge_features': 1, # x_j - x_i and U_\inf on local edge axes
+    'cond_edge_features': 3, # x_j - x_i and U_\inf on local edge axes
     'depths':             experiment['depths'],
     'fnns_width':         experiment['width'],
     'aggr':               'sum',
