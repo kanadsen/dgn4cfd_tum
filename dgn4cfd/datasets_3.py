@@ -149,12 +149,9 @@ class Dataset(torch.utils.data.Dataset):
 
     """
     def read_conditions(self,txt_path):
-        """
-        #Reads a .txt file where each line contains 4 numbers:
-        #    id  cond1  cond2  cond3
-        #Returns:
-        #    A list of lists: [[cond1, cond2, cond3], ...]
-        """
+            id  cond1  cond2  cond3
+        Returns:
+            A list of lists: [[cond1, cond2, cond3], .
         conditions = []
 
         with open(txt_path, "r") as f:
