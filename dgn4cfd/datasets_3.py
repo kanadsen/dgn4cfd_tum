@@ -143,7 +143,7 @@ class Dataset(torch.utils.data.Dataset):
                 except ValueError:
                     continue
 
-                if len(conditions) == 3
+                if len(conditions) == 3:
                     break
         return conditions
 
