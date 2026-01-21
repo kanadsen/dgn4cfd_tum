@@ -110,7 +110,7 @@ class Dataset(torch.utils.data.Dataset):
 
             # Ensure encas pattern exists
             encas_pattern = os.path.join(full_path,"**","*.encas")
-            encas_files = glob(encas_patter,recursive=True)
+            encas_files = glob(encas_pattern,recursive=True)
 
             if len(encas_files)==0:
                 continue
