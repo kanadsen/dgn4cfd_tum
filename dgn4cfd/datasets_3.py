@@ -143,12 +143,13 @@ class Dataset(torch.utils.data.Dataset):
                 key , value = line.split(":",1)
 
                 try:
-                    conditions[key.strip()]=float(value.strip())
+                    conditions.append(float(value.strip()))
                 except ValueError:
                     continue
 
                 if len(conditions) == 3:
                     break
+        print(conditions)
         return conditions
 
     """
