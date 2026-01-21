@@ -70,21 +70,24 @@ class Dataset(torch.utils.data.Dataset):
         self.data = None
         self.mesh = None
 
+
+
+    
     
     def find_all_files_and_params(self) -> list:
         """
-        For each sample_<idx> folder:
-        - extracts ONLY VTU files of form <idx>_0.vtu
-        - extracts ALL .txt files inside that folder
+        #For each sample_<idx> folder:
+        #- extracts ONLY VTU files of form <idx>_0.vtu
+        #- extracts ALL .txt files inside that folder
 
-        Returns a dict:
-            {
-            "000": {
-                "vtu": [".../sample_000/000_0.vtu"],
-                "txt": [".../sample_000/000.txt", "..."]
-            },
-            ...
-            }
+        #Returns a dict:
+        #    {
+        #    "000": {
+        #        "vtu": [".../sample_000/000_0.vtu"],
+        #        "txt": [".../sample_000/000.txt", "..."]
+        #    },
+        #    ...
+        #    }
         """
 
         if not hasattr(self, "path"):
@@ -105,6 +108,12 @@ class Dataset(torch.utils.data.Dataset):
 
             sample_id = match.group(1)  # e.g., "000"
 
+            # Ensure encas pattern exists
+            encas_pattern = os.path.join(full_path,"**","*.encas")
+            encas_files = glob(encas_patter,recursive=True)
+
+            if len(encas_files)==0:
+                continue
             # -------- Extract ONLY *_0.vtu --------
             vtu_pattern = os.path.join(full_path, "**", f"{sample_id}_5.vtu")
             vtu_files = sorted(glob(vtu_pattern, recursive=True))
@@ -115,7 +124,10 @@ class Dataset(torch.utils.data.Dataset):
 
             output.append((vtu_files[0],txt_files[0]))
 
+            print(sample_id)
+
         return output
+    
 
     def read_conditions(self,txt_path):
         """
