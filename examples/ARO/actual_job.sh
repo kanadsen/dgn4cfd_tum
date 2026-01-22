@@ -1,7 +1,7 @@
 #!/bin/bash --login
 #PBS -l select=1:system=polaris
-#PBS -l walltime=3:00:00
-#PBS -q prod
+#PBS -l walltime=1:00:00
+#PBS -q preemptable
 #PBS -l filesystems=home:eagle:grand
 #PBS -A NeuralDE
 #PBS -m bae
