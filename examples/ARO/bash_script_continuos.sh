@@ -2,7 +2,7 @@
 #Shell script that submits ml4dvar_pangu jobs to allow for continual cycling using
 #Watches if current job is completed and then cycles the job
 START=1
-NUM_JOBS=12
+NUM_JOBS=2
 for i in $(seq $START $NUM_JOBS)
     do
         echo "Starting $i"
