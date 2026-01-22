@@ -19,4 +19,4 @@ source /lus/grand/projects/NeuralDE/kanadsen/environment_folders/dgn_new_env/bin
 
 echo "Source activated"
 which python
-python -u train_dgn.py > out.txt 2>&1
+python -u train_dgn.py 
