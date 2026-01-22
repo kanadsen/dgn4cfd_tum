@@ -7,8 +7,8 @@
 PROJECT_DIR=/lus/grand/projects/NeuralDE/kanadsen/myrepos/dgn4cfd_tum/examples/ARO
 cd $PROJECT_DIR || exit 1
 
-source ../../../../environment_folders/dgn_new_env/bin/activate
+source /lus/grand/projects/NeuralDE/kanadsen/environment_folders/dgn_new_env/bin/activate
 
 echo "Source activated"
-
-python train_dgn.py
+which python
+python -u train_dgn.py
