@@ -1,7 +1,7 @@
-#PBS -1 select=1:system=polaris
+
 #PBS -1 walltime=1:00:00
 #PBS -q debug
-#PBS -1 filesystems=home:grand
+#PBS -1 filesystems=grand:home
 #PBS -A NeuralDE
 
 PROJECT_DIR=/lus/grand/projects/NeuralDE/kanadsen/myrepos/dgn4cfd_tum/examples/ARO
