@@ -11,6 +11,8 @@ PROJECT_DIR=/lus/grand/projects/NeuralDE/kanadsen/myrepos/dgn4cfd_tum/examples/A
 ls -ld $PROJECT_DIR
 cd $PROJECT_DIR || exit 1
 
+echo "Project Dir changed"
+
 source /lus/grand/projects/NeuralDE/kanadsen/environment_folders/dgn_new_env/bin/activate
 
 echo "Source activated"
