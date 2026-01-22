@@ -30,9 +30,9 @@ torch.manual_seed(seed)
 # Dictionary of experiments
 experiment = {
     0: {
-        'name': 'DGNN_3_64_layers',
+        'name': 'DGNN_3_128_layers_single_gpu',
         'depths':   [2,2,2,2],
-        'width':    64,
+        'width':    128,
         'nt':    1, # Limit the length of the training simulations to 250 time-steps
     },
 }[args.experiment_id]
@@ -45,7 +45,7 @@ train_settings = dgn.nn.TrainingSettings(
     tensor_board  = './boards',
     chk_interval  = 1,
     training_loss = dgn.nn.losses.HybridLoss(),
-    epochs        = 5000,
+    epochs        = 8000,
     batch_size    = 6,
     lr            = 1e-4,
     grad_clip     = {"epoch": 0, "limit": 1},
