@@ -9,4 +9,6 @@ cd $PROJECT_DIR || exit 1
 
 source ../../../../environment_folders/dgn_new_env/bin/activate
 
+echo "Source activated"
+
 python train_dgn.py
