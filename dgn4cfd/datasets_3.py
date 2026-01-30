@@ -1,7 +1,6 @@
 import os
 import torch
 import random
-import h5py
 import numpy as np
 from typing import Callable, Dict, Union
 from enum import Enum
@@ -241,7 +240,7 @@ class Dataset(torch.utils.data.Dataset):
         mesh = pv.read(data_file)
         points = mesh.points
         #print(mesh.point_data.keys())
-        target = mesh.point_data['pressure'].reshape(-1, 1) 
+        target = mesh.point_data['pressure'].reshape(-1, 1)  #mach_number
         
         #data = mesh.point_data(['pressure']).reshape(-1, 1) # Reshape to (-1,1)
         #data = torch.tensor(data, dtype=torch.float32) #-> Shape (N,1)
@@ -306,7 +305,7 @@ class Shock(Dataset):
         graph.pos = torch.tensor(points, dtype=torch.float32) # x, y, z
         params = torch.tensor(conditions,dtype=torch.float32).repeat(points.shape[0], 1)
         graph.glob = params[:,0:1]
-        graph.loc = params[:,1:2]
+        graph.loc = params[:,1:3]
         #graph.param_3 = params[:,2:3]
         #graph.loc = torch.tensor(conditions,dtype=torch.float32).repeat(points.shape[0], 1)
         graph.target = torch.tensor(target, dtype=torch.float32)

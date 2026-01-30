@@ -1,7 +1,7 @@
 from torch_geometric.data import Data
 import sys
-sys.path.insert(0,'/lus/grand/projects/NeuralDE/kanadsen/myrepos/dgn4cfd_tum/dgn4cfd')
-from plot import pos, field, pos_field
+sys.path.insert(0,'/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/dgn4cfd')
+from plot import *
 
 
 class Graph(Data):
@@ -19,3 +19,6 @@ class Graph(Data):
 
     def plot_pos_field(self, *args, **kwargs):
         pos_field(self.pos, *args, **kwargs)
+    
+    def plot_pos_field_2D(self, *args, **kwargs):
+        pos_field_2D(self.pos, *args, **kwargs)

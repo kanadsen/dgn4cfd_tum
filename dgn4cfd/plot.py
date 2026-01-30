@@ -93,6 +93,60 @@ def pos(
     plt.show()
     return fig, ax
 
+def pos_field_2D(
+    pos:      torch.Tensor,
+    u:        torch.Tensor,
+    s:        float = 0.1,
+    cmap:     Optional[str] = "coolwarm",
+    filename: Optional[str] = None,
+    fontsize: Optional[int] = 8,
+    vmin:     Optional[float] = None,
+    vmax:     Optional[float] = None,
+    azim:     float = None,
+    dist:     float = None,
+    elev:     float = None,
+    title:    str = None,
+) -> tuple[plt.Figure, plt.Axes]:
+    """Plot node positions and field values.
+    
+    Args:
+        pos (torch.Tensor): Node positions. Dim: (num_nodes, 2) or (num_nodes, 3).
+        u (torch.Tensor): Field values. Dim: (num_nodes,).
+        s (float, optional): Marker size. Defaults to 0.1.
+        cmap (Optional[str], optional): Colormap. Defaults to "coolwarm".
+        file (Optional[str], optional): File name to save plot. Defaults to None.
+        fontsize (Optional[int], optional): Font size. Defaults to 13.
+        vmin (Optional[float], optional): Minimum value for colormap. Defaults to None.
+        vmax (Optional[float], optional): Maximum value for colormap. Defaults to None.
+        azim (float, optional): Azimuthal angle. Defaults to None. Only for 3D plots.
+        dist (float, optional): Distance to plot. Defaults to None. Only for 3D plots.
+        elev (float, optional): Elevation angle. Defaults to None. Only for 3D plots.
+
+    Returns:
+        
+    """
+    assert u.dim() == 1, "u must be a 1D tensor." # Check dimension of u tensor is 1
+    assert pos.size(0) == u.size(0), "pos and u must have the same number of nodes." # Check that pos and u have the same number of nodes
+    if vmin and vmax is not None:
+        assert vmin < vmax, "vmin must be smaller than vmax."
+    pos = pos.to("cpu")
+    u   =   u.to("cpu")
+    fig = plt.figure(dpi = 600)
+    dim = pos.size(1)
+    ax = fig.add_subplot(111)
+    im = plt.scatter(pos[:,1], pos[:,2], c=u, cmap=cmap, s=s, vmin=vmin, vmax=vmax)
+    ax.set_aspect('equal')
+    plt.title(title if title else '2D Field Plot', fontsize=fontsize)
+
+    #cax = fig.add_axes([ax.get_position().x1+0.1,ax.get_position().y0,0.02,ax.get_position().height])
+    plt.colorbar(im, ax=ax)
+    plt.tight_layout()
+    #cax.yaxis.set_tick_params(labelsize=20)
+    if filename:
+        fig.savefig(filename)
+    plt.show()
+    return fig, ax
+
 
 def pos_field(
     pos:      torch.Tensor,

@@ -1,8 +1,8 @@
 import os
 import zipfile
 
-root_dir = "/lus/grand/projects/NeuralDE/kanadsen/dataset_trial2"        # Directory you want to scan (recursively)
-extract_root = "/lus/grand/projects/NeuralDE/kanadsen/dataset_trial2"   # Where extracted folders will be created
+root_dir = "/lus/flare/projects/Prob_AI/kanadsen/all_data/ARO_data/dataset_trial2"        # Directory you want to scan (recursively)
+extract_root = "/lus/flare/projects/Prob_AI/kanadsen/all_data/ARO_data/dataset_trial2"   # Where extracted folders will be created
 
 os.makedirs(extract_root, exist_ok=True)
 

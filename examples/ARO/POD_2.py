@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
+study = "pressure_norm"
+
 #from dgn4cfd.datasets_3 import *
 import sys
 sys.path.insert(0,'/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/dgn4cfd')
@@ -13,51 +15,128 @@ from datasets_3 import *
 
 print(torch.xpu.device_count())
 
-def extract_pod_data(dataset, verbose=False):
+def extract_pod_data(dataset, verbose=True):
     """
     Returns:
-        params:  (M, 2)
-        fields:  (M, N)
+        params : (M_valid, 3)
+        fields : (M_valid, N)
     """
-    M = len(dataset)
-    print("Printing POD data extraction...", M)
+    print("Starting POD data extraction...")
+    print(f"Total dataset size: {len(dataset)}")
 
     # ---- constants ----
     mu_norm = 2e3
-    p_shift = 2e3
-    p_scale = 7e5
 
-    # ---- infer field size from first sample ----
+    params_list = []
+    fields_list = []
+
+    # ---- infer field size ----
     first_graph = dataset[0]
     N = first_graph.target.numel()
 
-    # ---- preallocate ----
-    params = np.empty((M, 2), dtype=np.float32)
-    fields = np.empty((M, N), dtype=np.float32)
     for i, graph in enumerate(dataset):
-        # Parameters
-        params[i, 0] = graph.glob[0, 0].item() / mu_norm
-        params[i, 1] = graph.loc[0, 0].item() / mu_norm
 
-        # Pressure field
-        p = graph.target.view(-1)
+        # ---- parameters (normalized) ----
+        parameters_norm = torch.tensor([
+            graph.glob[0, 0].item() / mu_norm,
+            graph.loc[0, 0].item() / mu_norm,
+            graph.loc[0, 1].item() / 5.0
+        ], dtype=torch.float32)
 
-        # Ensure CPU before numpy
-        if p.is_cuda:
-            p = p.cpu()
+        # ---- skip near-zero regimes ----
+        if torch.all(parameters_norm < 0.1):
+            continue
 
-        fields[i] = (p.numpy() - p_shift) / p_scale
+        # ---- pressure field ----
+        p = (graph.target.detach().cpu().view(-1) - 2e3) / 7e5  # normalize pressure field
 
-        if (i % 10 == 0 or i == M - 1):
-            print(f"Extracted POD data {i+1}/{M}")
+        params_list.append(parameters_norm.numpy())
+        fields_list.append(p.numpy())
 
-        if i==50:
+        if verbose and (len(params_list) % 10 == 0):
+            print(f"Valid samples collected: {len(params_list)}")
+
+        # optional hard cap (now works correctly)
+        if len(params_list) == 50:
             break
 
-    print("End Printing POD data extraction...")
+    params = np.stack(params_list, axis=0)
+    fields = np.stack(fields_list, axis=0)
+
+    print(f"Finished POD data extraction")
+    print(f"Valid samples retained: {params.shape[0]}")
+    print(f"Field dimension: {fields.shape[1]}")
+
     return params, fields
 
-def compute_pod(fields, energy_thresh=0.999):
+
+def plot_modes(modes, graph, S):
+    """
+    Plots the POD modes using the provided graph for geometry.
+    """
+    K = modes.shape[1]
+
+    if S is not None:
+        energy = (S**2) / np.sum(S**2)
+
+    for k in range(K):
+        mode_k = torch.from_numpy(modes[:, k]).float().view(-1)
+
+        title = None
+        if S is not None:
+            title = f"Mode {k+1} | Energy = {energy[k]:.2e}"
+
+        graph.plot_pos_field_2D(
+            mode_k,
+            azim=180,
+            elev=0,
+            s=0.1,
+            title=title,
+            filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/{title}.png"
+        )
+
+def plot_pod_energy(S, energy_thresh=None, savepath=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mode_energy.png"):
+    energy = S**2
+    energy /= energy.sum()
+    cum_energy = np.cumsum(energy)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    ax.bar(
+        np.arange(1, len(energy)+1),
+        energy,
+        alpha=0.6,
+        label="Energy per mode"
+    )
+
+    ax.plot(
+        np.arange(1, len(cum_energy)+1),
+        cum_energy,
+        "o-",
+        color="black",
+        label="Cumulative energy"
+    )
+
+    if energy_thresh is not None:
+        ax.axhline(
+            energy_thresh,
+            linestyle="--",
+            color="red",
+            label=f"Threshold = {energy_thresh}"
+        )
+
+    ax.set_xlabel("Mode index")
+    ax.set_ylabel("Normalized energy")
+    ax.set_title("POD energy spectrum")
+    ax.legend()
+    ax.grid(True)
+
+    if savepath:
+        fig.savefig(savepath, bbox_inches="tight")
+
+    plt.show()
+
+def compute_pod(fields, graph, energy_thresh=0.999):
     """
     fields: (M, N)
     """
@@ -75,6 +154,11 @@ def compute_pod(fields, energy_thresh=0.999):
 
     print(f"POD modes retained: {K}")
     print(f"Truncation error: {1 - energy[K-1]:.2e}")
+    # Plot the energy spectrum
+    plot_pod_energy(S)
+
+    # Plot the modes
+    plot_modes(modes, graph, S)
 
     return mean_field, modes, coeffs
 
@@ -92,7 +176,7 @@ class PODDataset(torch.utils.data.Dataset):
 import torch.nn as nn
 
 class PODMLP(nn.Module):
-    def __init__(self, in_dim, out_dim, hidden_dim=256, depth=4):
+    def __init__(self, in_dim, out_dim, hidden_dim=256, depth=8):
         super().__init__()
 
         layers = [nn.Linear(in_dim, hidden_dim), nn.ReLU()]
@@ -102,6 +186,15 @@ class PODMLP(nn.Module):
 
         self.net = nn.Sequential(*layers)
 
+        # apply initialization
+        self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+
     def forward(self, x):
         return self.net(x)
 
@@ -109,14 +202,14 @@ def plot_error_histograms(field_errors, out_dir, epoch):
     # ---- Field error histogram ----
     plt.figure(figsize=(6, 4))
     plt.hist(field_errors, bins=15)
-    plt.xlabel("Relative L2 Error (pressure field)")
+    plt.xlabel(f"Relative L2 Error {study}")
     plt.ylabel("Count")
     plt.title("POD-MLP Test Error (Field Space)")
     plt.tight_layout()
     plt.savefig(f"{out_dir}/pod_mlp_field_error_hist_{epoch}.png", dpi=300)
     plt.close()
 
-def train_pod_mlp(model, loader, graph, params_test,fields_test,epochs=500, lr=1e-3, device="xpu"):
+def train_pod_mlp(model, loader, graph, params_test,fields_test,epochs=500, lr=5e-4, device="xpu"):
     model.to(device)
     opt = torch.optim.Adam(model.parameters(), lr=lr)
     loss_fn = nn.MSELoss()
@@ -142,6 +235,7 @@ def train_pod_mlp(model, loader, graph, params_test,fields_test,epochs=500, lr=1
             print(f"Epoch {ep:04d} | Loss {total/len(loader):.4e}")
             # Plot the results
             import random
+            model.eval()
 
             # Generate a random integer between 1 and 400
             idx = np.random.randint(0, len(params_test))
@@ -154,14 +248,16 @@ def train_pod_mlp(model, loader, graph, params_test,fields_test,epochs=500, lr=1
                 device=device
             )
           
-            p_pred = torch.tensor(p_pred, dtype=torch.float32).view(-1)
-            original = (torch.tensor(fields_test[idx], dtype=torch.float32).view(-1)-2e3)/7e5
+            p_pred = torch.tensor(p_pred, dtype=torch.float32).view(-1)*7e5 + 2e3  # denormalize pressure field
+            original = (torch.tensor(fields_test[idx], dtype=torch.float32).view(-1))*7e5 + 2e3  # denormalize pressure field
             
             field_errors = torch.abs(p_pred - original).numpy()
 
-            plot_error_histograms(field_errors, out_dir="/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_pressure", epoch=ep)
-            graph.plot_pos_field(p_pred, azim=180, elev=0, s=0.05,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_pressure/pressure_pod_mlp_pred_{ep}.png")
-            graph.plot_pos_field(original, azim=180, elev=0, s=0.05,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_pressure/pressure_original_{ep}.png")
+            plot_error_histograms(field_errors, out_dir=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}", epoch=ep)
+            graph.plot_pos_field_2D(torch.abs(p_pred - original), title=f"Error for {params_test[idx]}", azim=180, elev=0, s=0.05,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_mlp_error_{ep}.png")
+            graph.plot_pos_field_2D(p_pred, title=f"Prediction for {params_test[idx]}", azim=180, elev=0, s=0.1,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_mlp_pred_{ep}.png")
+            graph.plot_pos_field_2D(original, title=f"Original for {params_test[idx]}", azim=180, elev=0, s=0.1,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_original_{ep}.png")
+            model.train()
 
 
 
@@ -208,7 +304,7 @@ dataset = Shock(
 graph = dataset.get_sequence(140, n_in=0)
 print(graph.target.shape)
 # Visualize target field
-graph.plot_pos_field(graph.target.split(1, dim=1)[0].view(-1), azim=180, elev=0,s=0.05,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/Test_image.png")
+graph.plot_pos_field_2D(graph.target.split(1, dim=1)[0].view(-1), azim=180, elev=0,s=0.05,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/Test_image.png")
 
 # Extract POD data
 params, fields = extract_pod_data(dataset)
@@ -218,7 +314,7 @@ print("Fields shape :", fields.shape)
 
 
 # POD
-mean_p, modes, coeffs = compute_pod(fields, energy_thresh=0.999)
+mean_p, modes, coeffs = compute_pod(fields, graph, energy_thresh=0.999)
 
 # -------------------------
 # Train / Test split
