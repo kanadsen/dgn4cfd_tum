@@ -22,3 +22,6 @@ class Graph(Data):
     
     def plot_pos_field_2D(self, *args, **kwargs):
         pos_field_2D(self.pos, *args, **kwargs)
+    
+    def plot_pos_field_uvw_2D (self, *args, **kwargs):
+        pos_field_uvw_2D(self.pos, *args, **kwargs)

@@ -131,7 +131,7 @@ def pos_field_2D(
         assert vmin < vmax, "vmin must be smaller than vmax."
     pos = pos.to("cpu")
     u   =   u.to("cpu")
-    fig = plt.figure(dpi = 600)
+    fig = plt.figure(dpi = 1000)
     dim = pos.size(1)
     ax = fig.add_subplot(111)
     im = plt.scatter(pos[:,1], pos[:,2], c=u, cmap=cmap, s=s, vmin=vmin, vmax=vmax)
@@ -145,7 +145,138 @@ def pos_field_2D(
     if filename:
         fig.savefig(filename)
     plt.show()
+    plt.close()
     return fig, ax
+
+import torch
+import matplotlib.pyplot as plt
+
+def pos_field_uvw_2D(
+    pos: torch.Tensor,
+    u: torch.Tensor,
+    v: torch.Tensor,
+    w: torch.Tensor,
+    *,
+    cmap_uv="coolwarm",
+    cmap_w="viridis",
+    s=0.1,
+    title=None,
+    fontsize=10,
+    vmin_uv=None,
+    vmax_uv=None,
+    vmin_w=None,
+    vmax_w=None,
+    filename=None,
+):
+    """
+    Side-by-side 2D scatter plots for (u, v, w).
+    u and v share the same colorbar scale.
+    w has its own colorbar.
+    """
+
+    # ------------------------
+    # Assertions
+    # ------------------------
+    assert pos.dim() == 2 and pos.size(1) >= 3, "pos must be (N, >=3)"
+    assert u.dim() == v.dim() == w.dim() == 1, "u, v, w must be 1D tensors"
+    assert pos.size(0) == u.size(0) == v.size(0) == w.size(0), \
+        "pos, u, v, w must have the same number of nodes"
+
+    if vmin_uv is not None and vmax_uv is not None:
+        assert vmin_uv < vmax_uv, "vmin_uv must be smaller than vmax_uv"
+
+    if vmin_w is not None and vmax_w is not None:
+        assert vmin_w < vmax_w, "vmin_w must be smaller than vmax_w"
+
+    # ------------------------
+    # Move to CPU
+    # ------------------------
+    pos = pos.cpu()
+    u   = u.cpu()
+    v   = v.cpu()
+    w   = w.cpu()
+
+    # ------------------------
+    # Figure & axes
+    # ------------------------
+    fig, axes = plt.subplots(1, 3, figsize=(15,5), dpi=1200, constrained_layout=True)
+
+    # ------------------------
+    # Shared normalization for u & v
+    # ------------------------
+    if vmin_uv is None:
+        vmin_uv = min(u.min().item(), v.min().item())
+    if vmax_uv is None:
+        vmax_uv = max(u.max().item(), v.max().item())
+
+    # ------------------------
+    # u plot
+    # ------------------------
+    im_u = axes[0].scatter(
+        pos[:, 1], pos[:, 2],
+        c=u,
+        cmap=cmap_uv,
+        s=s,
+        vmin=vmin_uv,
+        vmax=vmax_uv,
+    )
+    axes[0].set_title("Prediction", fontsize=fontsize)
+    axes[0].set_aspect("equal")
+
+    # ------------------------
+    # v plot (same color scale)
+    # ------------------------
+    im_v = axes[1].scatter(
+        pos[:, 1], pos[:, 2],
+        c=v,
+        cmap=cmap_uv,
+        s=s,
+        vmin=vmin_uv,
+        vmax=vmax_uv,
+    )
+    axes[1].set_title("Target", fontsize=fontsize)
+    axes[1].set_aspect("equal")
+
+    # ------------------------
+    # w plot (independent color scale)
+    # ------------------------
+    im_w = axes[2].scatter(
+        pos[:, 1], pos[:, 2],
+        c=w,
+        cmap=cmap_w,
+        s=s,
+        vmin=vmin_w,
+        vmax=vmax_w,
+    )
+    axes[2].set_title("Error", fontsize=fontsize)
+    axes[2].set_aspect("equal")
+
+    # ------------------------
+    # Colorbars
+    # ------------------------
+    cbar_uv = fig.colorbar(im_u, ax=axes[:2], shrink=0.85)
+    cbar_uv.set_label("u / v", fontsize=fontsize)
+
+    cbar_w = fig.colorbar(im_w, ax=axes[2], shrink=0.85)
+    cbar_w.set_label("w", fontsize=fontsize)
+
+    # ------------------------
+    # Global title
+    # ------------------------
+    if title:
+        fig.suptitle(title, fontsize=fontsize)
+
+    # ------------------------
+    # Save / show
+    # ------------------------
+    if filename:
+        fig.savefig(filename, bbox_inches="tight")
+
+    plt.show()
+    plt.close(fig)
+
+    return fig, axes
+
 
 
 def pos_field(

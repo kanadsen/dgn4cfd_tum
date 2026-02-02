@@ -57,8 +57,8 @@ def extract_pod_data(dataset, verbose=True):
             print(f"Valid samples collected: {len(params_list)}")
 
         # optional hard cap (now works correctly)
-        if len(params_list) == 50:
-            break
+        #if len(params_list) == 50:
+        #    break
 
     params = np.stack(params_list, axis=0)
     fields = np.stack(fields_list, axis=0)
@@ -253,10 +253,10 @@ def train_pod_mlp(model, loader, graph, params_test,fields_test,epochs=500, lr=5
             
             field_errors = torch.abs(p_pred - original).numpy()
 
-            plot_error_histograms(field_errors, out_dir=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}", epoch=ep)
-            graph.plot_pos_field_2D(torch.abs(p_pred - original), title=f"Error for {params_test[idx]}", azim=180, elev=0, s=0.05,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_mlp_error_{ep}.png")
-            graph.plot_pos_field_2D(p_pred, title=f"Prediction for {params_test[idx]}", azim=180, elev=0, s=0.1,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_mlp_pred_{ep}.png")
-            graph.plot_pos_field_2D(original, title=f"Original for {params_test[idx]}", azim=180, elev=0, s=0.1,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_original_{ep}.png")
+            #plot_error_histograms(field_errors, out_dir=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}", epoch=ep)
+            #graph.plot_pos_field_2D(torch.abs(p_pred - original), title=f"Error for {params_test[idx]}", azim=180, elev=0, s=0.05,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_mlp_error_{ep}.png")
+            #graph.plot_pos_field_2D(p_pred, title=f"Prediction for {params_test[idx]}", azim=180, elev=0, s=0.1,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_mlp_pred_{ep}.png")
+            #graph.plot_pos_field_2D(original, title=f"Original for {params_test[idx]}", azim=180, elev=0, s=0.1,filename=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/mach_pod_original_{ep}.png")
             model.train()
 
 
@@ -281,6 +281,97 @@ def eval_pod_mlp(model, params_test, coeffs_test, device="xpu"):
             errs.append(np.linalg.norm(pred - coeffs_test[i]))
 
     print(f"Mean test coeff L2 error: {np.mean(errs):.3e}")
+
+
+def save_dataset_frames(
+    model,
+    params,
+    fields,
+    mean_p,
+    modes,
+    graph,
+    epoch,
+    out_dir,
+    tag,
+    device="xpu",
+):
+    """
+    tag: 'train' or 'test'
+    """
+    model.eval()
+
+    frame_dir_pred = os.path.join(out_dir, "frames_true")
+    os.makedirs(frame_dir_pred, exist_ok=True)
+
+    frame_dir_true = os.path.join(out_dir, "frames_pred")
+    os.makedirs(frame_dir_true, exist_ok=True)
+
+    frame_dir_error = os.path.join(out_dir, "frames_error")
+    os.makedirs(frame_dir_error, exist_ok=True)
+
+    frame_dir_all = os.path.join(out_dir, "frames_all")
+    os.makedirs(frame_dir_all, exist_ok=True)
+
+    for i in range(len(params)):
+        p_pred = reconstruct_pressure(
+            model,
+            params[i],
+            mean_p,
+            modes,
+            device=device,
+        )
+
+        p_pred = torch.tensor(p_pred, dtype=torch.float32).view(-1) * 7e5 + 2e3
+        original = torch.tensor(fields[i], dtype=torch.float32).view(-1) * 7e5 + 2e3
+
+        error = torch.abs(p_pred - original)
+
+        fname_true = os.path.join(frame_dir_true, f"{i:04d}.png")
+        fname_pred = os.path.join(frame_dir_pred, f"{i:04d}.png")
+        fname_error = os.path.join(frame_dir_error, f"{i:04d}.png")
+        fname_all = os.path.join(frame_dir_all, f"{i:04d}.png")
+
+        """
+        graph.plot_pos_field_2D(
+            error,
+            title=f"Prediction for {params[i]}",
+            azim=180,
+            elev=0,
+            s=0.05,
+            filename=fname_error,
+        )
+
+        graph.plot_pos_field_2D(
+            p_pred,
+            title=f"Prediction for {params[i]}",
+            azim=180,
+            elev=0,
+            s=0.05,
+            filename=fname_pred,
+        )
+
+        graph.plot_pos_field_2D(
+            original,
+            title=f"Prediction for {params[i]}",
+            azim=180,
+            elev=0,
+            s=0.05,
+            filename=fname_true,
+        )
+        """
+
+        graph.plot_pos_field_uvw_2D(
+            u = p_pred,
+            v = original,
+            w = error,
+            title=f"Prediction for {params[i]}",
+            s=0.1,
+            vmin_uv=2e3,
+            vmax_uv=6e5,
+            vmin_w=0,
+            vmax_w=12000,
+            filename=fname_all,
+        )
 
 # -------------------------
 # Training dataset
@@ -356,3 +447,27 @@ train_pod_mlp(model, train_loader, graph, params_test,
 
 
 eval_pod_mlp(model, params_test, coeffs_test)
+
+save_dataset_frames(
+    model,
+    params_train,
+    fields_train,
+    mean_p,
+    modes,
+    graph,
+    epoch="final",
+    out_dir=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/outputs_train",
+    tag="train",
+)
+
+save_dataset_frames(
+    model,
+    params_test,
+    fields_test,
+    mean_p,
+    modes,
+    graph,
+    epoch="final",
+    out_dir=f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/outputs_test",
+    tag="test",
+)
