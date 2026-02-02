@@ -10,6 +10,9 @@ __pycache__/
 *.vtk
 
 # Virtual environments
+examples/ARO/outputs_mach/
+examples/ARO/outputs_pressure
+examples/ARO/outputs_pressure_norm
 data
 dgn4cfd_env
 venv/
