@@ -31,7 +31,7 @@ def extract_pod_data(dataset, verbose=True):
     fields_list = []
 
     # ---- infer field size ----
-    first_graph = dataset[0]
+    first_graph = dataset[0] # Access the first graph to determine the field size
     N = first_graph.target.numel()
 
     for i, graph in enumerate(dataset):
