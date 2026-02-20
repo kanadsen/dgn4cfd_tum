@@ -240,7 +240,7 @@ class Dataset(torch.utils.data.Dataset):
         mesh = pv.read(data_file)
         points = mesh.points
         #print(mesh.point_data.keys())
-        target = mesh.point_data['pressure'].reshape(-1, 1)  #mach_number
+        target = mesh.point_data['mach_number'].reshape(-1, 1)  #mach_number
         
         #data = mesh.point_data(['pressure']).reshape(-1, 1) # Reshape to (-1,1)
         #data = torch.tensor(data, dtype=torch.float32) #-> Shape (N,1)

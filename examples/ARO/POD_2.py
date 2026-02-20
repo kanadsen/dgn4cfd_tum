@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-study = "pressure_norm"
+study = "mach"
 
 #from dgn4cfd.datasets_3 import *
 import sys
@@ -48,7 +48,7 @@ def extract_pod_data(dataset, verbose=True):
             continue
 
         # ---- pressure field ----
-        p = (graph.target.detach().cpu().view(-1) - 2e3) / 7e5  # normalize pressure field
+        p = (graph.target.detach().cpu().view(-1)) # normalize pressure field
 
         params_list.append(parameters_norm.numpy())
         fields_list.append(p.numpy())
@@ -159,6 +159,16 @@ def compute_pod(fields, graph, energy_thresh=0.999):
 
     # Plot the modes
     plot_modes(modes, graph, S)
+
+    np.savez_compressed(
+        f"/lus/flare/projects/Prob_AI/kanadsen/myrepos/dgn4cfd_tum/examples/ARO/outputs_{study}/modes_{study}.npz",
+        mean_field=mean_field,
+        modes=modes,
+        coeffs=coeffs,
+        singular_values=S,
+        energy=energy,
+        K=K
+    )
 
     return mean_field, modes, coeffs
 
